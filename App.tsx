@@ -1,23 +1,48 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
-import { Settings, Maximize2, Gift, Users, Trophy } from 'lucide-react';
+import { Settings, Maximize2, Gift, Users, Trophy, History } from 'lucide-react';
 import { Participant, Prize, Winner, RiggedRule } from './types';
 import Background from './components/Background';
 import AdminPanel from './components/AdminPanel';
 import SlotMachine from './components/SlotMachine';
+import WinnersHistory from './components/WinnersHistory';
 
 const App: React.FC = () => {
   // --- STATE ---
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [prizes, setPrizes] = useState<Prize[]>([]);
-  const [riggedRules, setRiggedRules] = useState<RiggedRule[]>([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  
+  // Initialize state with localStorage check for persistence
+  const [participants, setParticipants] = useState<Participant[]>(() => {
+    const saved = localStorage.getItem('cl_participants');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [prizes, setPrizes] = useState<Prize[]>(() => {
+    const saved = localStorage.getItem('cl_prizes');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [riggedRules, setRiggedRules] = useState<RiggedRule[]>(() => {
+    const saved = localStorage.getItem('cl_riggedRules');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [winners, setWinners] = useState<Winner[]>(() => {
+    const saved = localStorage.getItem('cl_winners');
+    return saved ? JSON.parse(saved) : [];
+  });
   
   // Game State
-  const [winners, setWinners] = useState<Winner[]>([]);
   const [currentPrizeId, setCurrentPrizeId] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [roundWinners, setRoundWinners] = useState<Participant[] | null>(null);
+
+  // --- PERSISTENCE EFFECT ---
+  useEffect(() => {
+    localStorage.setItem('cl_participants', JSON.stringify(participants));
+    localStorage.setItem('cl_prizes', JSON.stringify(prizes));
+    localStorage.setItem('cl_riggedRules', JSON.stringify(riggedRules));
+    localStorage.setItem('cl_winners', JSON.stringify(winners));
+  }, [participants, prizes, riggedRules, winners]);
 
   // --- DERIVED STATE ---
   const currentPrize = useMemo(() => prizes.find(p => p.id === currentPrizeId), [currentPrizeId, prizes]);
@@ -156,6 +181,13 @@ const App: React.FC = () => {
             <h1 className="text-2xl font-display font-bold tracking-wider">CYBER<span className="text-cyber-primary">LUCK</span></h1>
         </div>
         <div className="flex gap-4">
+             <button 
+                onClick={() => setIsHistoryOpen(true)}
+                className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors group relative"
+                title="Winner History"
+            >
+                <History size={20} className="group-hover:text-cyber-primary transition-colors" />
+             </button>
              <button 
                 onClick={() => document.documentElement.requestFullscreen()}
                 className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors"
@@ -323,8 +355,21 @@ const App: React.FC = () => {
             onReset={() => {
                 setWinners([]);
                 setRoundWinners(null);
+                setParticipants([]);
+                setPrizes([]);
+                setRiggedRules([]);
+                localStorage.clear();
             }}
             onClose={() => setIsAdminOpen(false)}
+        />
+      )}
+
+      {/* Winners History Overlay */}
+      {isHistoryOpen && (
+        <WinnersHistory 
+            winners={winners}
+            prizes={prizes}
+            onClose={() => setIsHistoryOpen(false)}
         />
       )}
     </div>
